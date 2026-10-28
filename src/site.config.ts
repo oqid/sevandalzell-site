@@ -5,7 +5,7 @@
 export const SITE = {
   name: 'Sevan Dalzell',
   mark: 'vii',
-  description: "Sevan Dalzell's portfolio: mechatronics engineering, design and photography.",
+  description: 'Sevan Dalzell, final-year mechatronics engineering student at the University of Auckland. Projects in design, robotics and photography.',
   email: 'contact@sevandalzell.com',
   linkedin: 'https://www.linkedin.com/in/sevandalzell/',
   cv: '/Sevan-Dalzell-CV-2026.pdf',

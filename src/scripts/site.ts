@@ -267,9 +267,11 @@ if (night && night.sunset && nightBox) {
       restLater();
     }, ms);
   };
+  let openedAt = 0;
   const open = () => {
     window.clearTimeout(closeTimer);
     wake();
+    if (!nightBox.classList.contains('is-open')) openedAt = performance.now();
     setOpen(true);
   };
 
@@ -323,9 +325,10 @@ if (night && night.sunset && nightBox) {
     });
   };
 
-  // tap on touch screens: the first tap opens, the next one flips
+  // tap on touch screens: the first tap opens, the next one flips (a tap
+  // also fires mouseenter, which has just opened it: that doesn't count)
   icon.addEventListener('click', () => {
-    if (!nightBox.classList.contains('is-open')) return open();
+    if (!nightBox.classList.contains('is-open') || performance.now() - openedAt < 500) return open();
     flipMode(icon);
   });
   flip.addEventListener('click', () => flipMode(flip));

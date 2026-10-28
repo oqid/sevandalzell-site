@@ -388,10 +388,10 @@ function startGesture(axis: Axis) {
   gesture = { axis, base: current, raw: cam[axis] - place(current)[axis], samples: [] };
 }
 
-function dragBy(px: number) {
+function dragBy(px: number, maxStep = MAX_STEP_PX) {
   const g = gesture;
   if (!g) return;
-  const step = Math.max(-MAX_STEP_PX, Math.min(MAX_STEP_PX, px)); // speed limit
+  const step = Math.max(-maxStep, Math.min(maxStep, px)); // speed limit
   g.raw += step / size(g.axis);
   const max = neighbour(g.base, posDir(g.axis), g.axis) ? 1 : 0;
   const min = neighbour(g.base, negDir(g.axis), g.axis) ? -1 : 0;
@@ -431,10 +431,18 @@ function release() {
 }
 
 /* ---------- trackpad & mouse wheel ---------- */
+// Windows trackpads send much smaller scroll deltas than Mac ones for the
+// same finger movement, so there a swipe counts for more. (Mouse wheels
+// are handled separately below and aren't affected.)
+const isWindows = /^win/i.test((navigator as any).userAgentData?.platform ?? navigator.platform ?? '');
+const TRACKPAD_GAIN = isWindows ? 1.8 : 1;
+const AXIS_AFTER_PX = 16; // a swipe's direction is judged over its first few px, not its first event
+
 let lastWheel = 0;
 let wheelSpent = false; // this stream already moved us: ignore the rest of it
 let edgeAtStart = { up: false, down: false };
 let wheelEndTimer = 0;
+let pending = { x: 0, y: 0 }; // movement so far, before the axis is decided
 
 window.addEventListener('wheel', (e) => {
   if (e.ctrlKey || document.querySelector('dialog[open]')) return; // ctrl = pinch zoom
@@ -443,6 +451,7 @@ window.addEventListener('wheel', (e) => {
   if (now - lastWheel > STREAM_GAP_MS) {
     // a new gesture
     wheelSpent = false;
+    pending = { x: 0, y: 0 };
     const p = panel(current);
     edgeAtStart = { up: atEdge(p, 'up'), down: atEdge(p, 'down') };
   }
@@ -451,16 +460,52 @@ window.addEventListener('wheel', (e) => {
   const unit = e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? window.innerHeight : 1;
   const dx = e.deltaX * unit;
   const dy = e.deltaY * unit;
-  const horizontal = gesture ? gesture.axis === 'x' : Math.abs(dx) > Math.abs(dy);
-  const d = horizontal ? dx : dy;
-  if (d === 0) return;
-  const dir: Dir = horizontal ? (d > 0 ? 'right' : 'left') : d > 0 ? 'down' : 'up';
+  if (dx === 0 && dy === 0) return;
 
   if (wheelSpent) {
     // leftover momentum from a flick that already moved us
     e.preventDefault();
     return;
   }
+
+  // A physical mouse wheel moves in clicks: one click = one move.
+  const mainX = Math.abs(dx) > Math.abs(dy);
+  const wd = mainX ? (e as any).wheelDeltaX : (e as any).wheelDeltaY;
+  const notched =
+    !gesture &&
+    (e.deltaMode !== 0 || (typeof wd === 'number' && wd !== 0 && wd % 120 === 0 && Math.max(Math.abs(dx), Math.abs(dy)) >= 50));
+
+  pending.x += dx;
+  pending.y += dy;
+
+  // A swipe that began a little vertical (so it started pulling toward
+  // the place below) but is now clearly sideways: turn it sideways.
+  if (gesture?.axis === 'y' && !notched && Math.abs(pending.x) > 1.5 * Math.abs(pending.y)) {
+    const base = place(gesture.base);
+    if (Math.abs(cam.y - base.y) < 0.1) {
+      cam.y = base.y;
+      gesture = null;
+    }
+  }
+
+  let horizontal: boolean;
+  if (gesture) {
+    horizontal = gesture.axis === 'x';
+  } else if (notched) {
+    horizontal = mainX;
+  } else {
+    // Trackpad: wait for a few px of movement, then pick the axis it's
+    // mostly along, so a sideways swipe that starts a little diagonal
+    // still goes sideways.
+    if (Math.abs(pending.x) + Math.abs(pending.y) < AXIS_AFTER_PX) {
+      if (Math.abs(pending.x) > Math.abs(pending.y)) e.preventDefault();
+      return;
+    }
+    horizontal = Math.abs(pending.x) > Math.abs(pending.y);
+  }
+  const d = horizontal ? (gesture || notched ? dx : pending.x) : gesture || notched ? dy : pending.y;
+  if (d === 0) return;
+  const dir: Dir = horizontal ? (d > 0 ? 'right' : 'left') : d > 0 ? 'down' : 'up';
 
   if (!horizontal && !gesture) {
     // Vertical: normal scrolling, unless this gesture began at the edge
@@ -471,10 +516,7 @@ window.addEventListener('wheel', (e) => {
   }
   e.preventDefault();
 
-  // A physical mouse wheel moves in clicks: one click = one move.
-  const wd = horizontal ? (e as any).wheelDeltaX : (e as any).wheelDeltaY;
-  const notched = e.deltaMode !== 0 || (typeof wd === 'number' && wd !== 0 && wd % 120 === 0 && Math.abs(d) >= 50);
-  if (notched && !gesture) {
+  if (notched) {
     wheelSpent = true;
     const to = map.routes[current]?.[dir];
     if (to) {
@@ -489,7 +531,7 @@ window.addEventListener('wheel', (e) => {
 
   // Trackpad: the camera follows your fingers.
   if (!gesture) startGesture(horizontal ? 'x' : 'y');
-  dragBy(d);
+  dragBy(d * TRACKPAD_GAIN, MAX_STEP_PX * TRACKPAD_GAIN);
 
   // Dragged past halfway: commit now and ignore the rest of the flick.
   const off = cam[gesture!.axis] - place(gesture!.base)[gesture!.axis];
@@ -503,8 +545,18 @@ window.addEventListener('wheel', (e) => {
   wheelEndTimer = window.setTimeout(release, 140); // fingers lifted / momentum over
 }, { passive: false });
 
-/* ---------- touch: drag sideways between places ---------- */
-let touch: { x: number; y: number; lastX: number; locked: 'x' | 'none' | null } | null = null;
+/* ---------- touch: drag between places ----------
+   Sideways drags always pan. Up/down drags scroll the panel as normal,
+   unless the drag starts at the panel's top/bottom edge and there's a
+   place that way (e.g. home → about): then the camera follows instead. */
+let touch: {
+  x: number;
+  y: number;
+  lastX: number;
+  lastY: number;
+  locked: Axis | 'none' | null;
+  edge: { up: boolean; down: boolean };
+} | null = null;
 
 window.addEventListener('touchstart', (e) => {
   if (e.touches.length !== 1 || document.querySelector('dialog[open]')) {
@@ -512,7 +564,12 @@ window.addEventListener('touchstart', (e) => {
     return;
   }
   const t = e.touches[0];
-  touch = { x: t.clientX, y: t.clientY, lastX: t.clientX, locked: null };
+  const p = panel(current);
+  const edge = {
+    up: !!map.routes[current]?.up && atEdge(p, 'up'),
+    down: !!map.routes[current]?.down && atEdge(p, 'down'),
+  };
+  touch = { x: t.clientX, y: t.clientY, lastX: t.clientX, lastY: t.clientY, locked: null, edge };
 }, { passive: true });
 
 window.addEventListener('touchmove', (e) => {
@@ -520,22 +577,37 @@ window.addEventListener('touchmove', (e) => {
   const t = e.touches[0];
   const dx = t.clientX - touch.x;
   const dy = t.clientY - touch.y;
+  // finger up = heading down, and the other way round
+  const vdir: 'up' | 'down' = dy < 0 ? 'down' : 'up';
+  const vertical = Math.abs(dy) >= Math.abs(dx);
   if (!touch.locked) {
     if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.2) {
       touch.locked = 'x';
       startGesture('x');
     } else if (Math.abs(dy) > 10) {
-      touch.locked = 'none'; // vertical: the panel scrolls as normal
+      if (touch.edge[vdir]) {
+        touch.locked = 'y';
+        startGesture('y');
+      } else {
+        touch.locked = 'none'; // the panel scrolls as normal
+      }
+    } else if (dy !== 0 && vertical && touch.edge[vdir]) {
+      // probably about to pan: stop the page starting its own scroll/bounce
+      e.preventDefault();
     }
   }
   if (touch.locked === 'x') {
     dragBy(touch.lastX - t.clientX); // finger left → camera right
-    touch.lastX = t.clientX;
+  } else if (touch.locked === 'y') {
+    e.preventDefault();
+    dragBy(touch.lastY - t.clientY); // finger up → camera down
   }
-}, { passive: true });
+  touch.lastX = t.clientX;
+  touch.lastY = t.clientY;
+}, { passive: false });
 
 const endTouch = () => {
-  if (touch?.locked === 'x') release();
+  if (touch?.locked === 'x' || touch?.locked === 'y') release();
   touch = null;
 };
 window.addEventListener('touchend', endTouch, { passive: true });

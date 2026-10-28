@@ -43,8 +43,15 @@
     display: flex;
     align-items: center;
     gap: 0.35rem;
-    padding: 0.25rem; /* a slightly bigger hover target than the icon */
+    padding: 0.25rem;
     transition: opacity 0.9s ease;
+    /* only the icon and the open drawer take taps and hovers, so the
+       shut drawer's space doesn't block what's under it (the ↑ arrow) */
+    pointer-events: none;
+  }
+
+  .icon {
+    pointer-events: auto;
   }
 
   .night[hidden] {
@@ -114,6 +121,17 @@
     translate: 0 0;
     opacity: 1;
     pointer-events: auto;
+  }
+
+  /* phones: the drawer drops down under the icon, clear of the ↑ arrow */
+  @media (max-width: 720px) {
+    .drawer {
+      position: absolute;
+      top: calc(100% + 0.1rem);
+      right: 0.25rem;
+      clip-path: inset(-1px -1px 100% -1px);
+      translate: 0 -0.5rem;
+    }
   }
 
   .what {

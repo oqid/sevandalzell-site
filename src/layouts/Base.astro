@@ -14,7 +14,7 @@ interface Props {
   kind: 'plane' | 'page';
 }
 
-const { title, description = SITE.description, image = '/preview.png', kind } = Astro.props;
+const { title, description = SITE.description, image = '/preview-2026.png', kind } = Astro.props;
 const fullTitle = title ? `${title} | ${SITE.name}` : `${SITE.name} | portfolio`;
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const ogImage = new URL(image, Astro.site);
