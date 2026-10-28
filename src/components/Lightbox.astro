@@ -1,0 +1,74 @@
+---
+/* Click any image marked data-lightbox to see it full-screen.
+   Uses the native <dialog>, so Esc, focus and scroll-lock come for free. */
+---
+
+<dialog id="lightbox" aria-label="Enlarged media">
+  <button class="lightbox-close" type="button" aria-label="Close">×</button>
+  <div class="lightbox-content"></div>
+  <p class="lightbox-caption label"></p>
+</dialog>
+
+<style>
+  #lightbox {
+    width: 100vw;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 4rem 2rem 3rem;
+    border: 0;
+    background: var(--scrim);
+    color: #fafafa;
+    place-content: center;
+    justify-items: center;
+    gap: 1rem;
+  }
+
+  #lightbox[open] {
+    display: grid;
+    animation: lb-in 0.3s ease both;
+  }
+
+  @keyframes lb-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  #lightbox::backdrop {
+    background: transparent;
+  }
+
+  .lightbox-content :global(img),
+  .lightbox-content :global(video) {
+    max-width: min(92vw, 1800px);
+    max-height: 80dvh;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+  }
+
+  .lightbox-caption {
+    max-width: 60ch;
+    text-align: center;
+    color: rgb(250 250 250 / 0.75);
+  }
+
+  .lightbox-caption:empty {
+    display: none;
+  }
+
+  .lightbox-close {
+    position: absolute;
+    top: 1rem;
+    right: 1.25rem;
+    font-size: 2rem;
+    line-height: 1;
+    color: #fafafa;
+  }
+
+  .lightbox-close:hover {
+    color: var(--accent);
+  }
+</style>

@@ -1,0 +1,327 @@
+---
+/* One project on the portfolio page.
+   standard → media on one side, text on the other (sides alternate).
+   feature  → full-width lead image, text, then a strip of the rest. */
+import { render } from 'astro:content';
+import Media from './Media.astro';
+import YouTube from './YouTube.astro';
+import Tags from './Tags.astro';
+import { formatPeriod, type Project } from '../lib/projects';
+
+interface Props {
+  project: Project;
+  side: 'left' | 'right';
+  eager?: boolean;
+}
+
+const { project, side, eager = false } = Astro.props;
+const { data } = project;
+const { Content } = await render(project);
+const href = `/portfolio/${project.id}/`;
+// A line of just <!-- more --> in index.md: the entry here stops there,
+// and the rest only shows on the project page.
+const [intro, more] = (project.rendered?.html ?? '').split(/<!--\s*more\s*-->/i);
+const hasMore = more !== undefined;
+const [lead, ...rest] = data.media;
+
+// The carousel box takes its shape from the first image so it never
+// jumps while cycling; later slides letterbox inside it.
+const rawRatio = lead && 'image' in lead ? lead.image.width / lead.image.height : 3 / 2;
+const ratio = Math.min(2.2, Math.max(0.62, rawRatio));
+---
+
+{
+  data.display === 'feature' ? (
+    <article class="landmark landmark--feature" data-reveal>
+      <Media item={lead} sizes="100vw" eager={eager} class="feature-lead" />
+      <div class="cap cap--center">
+        <p class="label">{formatPeriod(data)}</p>
+        <h2 class="title">
+          <a href={href}>{data.title}</a>
+        </h2>
+        {data.role && <p class="role label">{data.role}</p>}
+        <div class="prose">
+          {hasMore ? <Fragment set:html={intro} /> : <Content />}
+        </div>
+        {hasMore && <a class="read-more label" href={href}>read more →</a>}
+        <Tags tags={data.tags} />
+      </div>
+      {rest.length > 0 && (
+        <div class="strip" style={`--n:${Math.min(rest.length, 3)}`}>
+          {rest.slice(0, 3).map((m) => (
+            <Media item={m} sizes="(max-width: 720px) 100vw, 33vw" />
+          ))}
+        </div>
+      )}
+      {data.film && <YouTube id={data.film.youtube} title={data.film.title} poster={data.film.poster} class="film" />}
+    </article>
+  ) : (
+    <article class={`landmark landmark--${side}`} data-reveal>
+      {data.media.length > 1 ? (
+        <div class="carousel" data-carousel style={`aspect-ratio:${ratio}`}>
+          {data.media.map((m, i) => (
+            <Media
+              item={m}
+              sizes="(max-width: 720px) 92vw, 55vw"
+              eager={eager && i === 0}
+              class={i === 0 ? 'slide is-active' : 'slide'}
+            />
+          ))}
+          <div class="dots" role="group" aria-label="Choose image">
+            {data.media.map((m, i) => (
+              <button type="button" class="dot" aria-label={`Show ${i + 1} of ${data.media.length}`} aria-pressed={i === 0 ? 'true' : 'false'} />
+            ))}
+          </div>
+        </div>
+      ) : (
+        // A single image shows uncropped at its own aspect ratio, so any
+        // ratio works. Preferred: 3:2 or 4:3 landscape (portrait gets
+        // tall next to the text). Upload it at least 2000px wide.
+        <Media item={lead} sizes="(max-width: 720px) 92vw, 55vw" eager={eager} class="single" />
+      )}
+      <div class="cap">
+        <p class="label">{formatPeriod(data)}</p>
+        <h2 class="title">
+          <a href={href}>{data.title}</a>
+        </h2>
+        {data.role && <p class="role label">{data.role}</p>}
+        <div class="prose">
+          {hasMore ? <Fragment set:html={intro} /> : <Content />}
+        </div>
+        {hasMore && <a class="read-more label" href={href}>read more →</a>}
+        <Tags tags={data.tags} />
+      </div>
+    </article>
+  )
+}
+
+<style>
+  .read-more {
+    text-decoration: none;
+    color: var(--ink-soft);
+    transition: color 0.2s ease;
+  }
+
+  .read-more:hover,
+  .read-more:focus-visible {
+    color: var(--ink);
+  }
+
+  .landmark {
+    margin-block: clamp(6rem, 18vh, 12rem);
+  }
+
+  /* ---------- standard ---------- */
+  .landmark--left,
+  .landmark--right {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(18rem, 1fr);
+    gap: 1.25rem clamp(2rem, 4vw, 4rem);
+    align-items: start;
+    /* centred, never wider than 84rem, never closer than --edge to the sides */
+    width: min(84rem, 100% - 2 * var(--edge));
+    margin-inline: auto;
+  }
+
+  .landmark--right {
+    grid-template-columns: minmax(18rem, 1fr) minmax(0, 1.6fr);
+  }
+
+  .landmark--right > .cap {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .landmark--right > :not(.cap) {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .cap {
+    display: grid;
+    gap: 0.6rem;
+    align-content: start;
+  }
+
+  /* Gentle depth, for continuity with the big headings: each project's
+     text drifts a little faster than its images as you scroll (it sits
+     slightly nearer). --cap-drift is how far it travels each way, ahead
+     of/behind the page, over the time it's on screen; 0 turns it off.
+     Runs on the compositor (scroll-driven animation); browsers without
+     support, and anyone with reduced motion on, just get still text. */
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .cap {
+        --cap-drift: 4vh;
+        animation: cap-drift linear both;
+        animation-timeline: view();
+      }
+    }
+  }
+
+  @keyframes cap-drift {
+    from {
+      translate: 0 var(--cap-drift);
+    }
+    to {
+      translate: 0 calc(-1 * var(--cap-drift));
+    }
+  }
+
+  .title {
+    font-size: var(--title-s);
+    line-height: 0.95;
+    letter-spacing: -0.035em;
+    margin-block: 0.15rem 0.1rem;
+  }
+
+  .landmark--feature .title {
+    font-size: var(--title-m);
+    letter-spacing: -0.045em;
+    max-width: 12ch;
+  }
+
+  .title a {
+    text-decoration: none;
+  }
+
+  .title a:hover {
+    color: var(--accent);
+  }
+
+  .role {
+    color: var(--accent);
+  }
+
+  .cap .prose {
+    margin-top: 0.5rem;
+    font-size: 1rem;
+  }
+
+  /* ---------- carousel ---------- */
+  .carousel {
+    position: relative;
+    display: grid;
+  }
+
+  .carousel > :global(.slide) {
+    grid-area: 1 / 1;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.8s ease-in-out, visibility 0s linear 0.8s;
+  }
+
+  .carousel > :global(.slide.is-active) {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.8s ease-in-out;
+  }
+
+  .carousel > :global(.slide) :global(img),
+  .carousel > :global(.slide) video {
+    object-fit: contain;
+  }
+
+  .dots {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1.1rem;
+    display: flex;
+    gap: 0.35rem;
+  }
+
+  .dot {
+    width: 1.6rem;
+    height: 0.75rem;
+    padding: 0;
+    display: grid;
+    align-items: center;
+  }
+
+  .dot::before {
+    content: '';
+    height: 2px;
+    background: var(--rule-strong);
+    transition: background-color 0.3s ease;
+  }
+
+  .dot[aria-pressed='true']::before {
+    background: var(--accent);
+  }
+
+  .dot:hover::before {
+    background: var(--ink);
+  }
+
+  /* ---------- feature ---------- */
+  .landmark--feature {
+    display: grid;
+    gap: 2.5rem;
+  }
+
+  /* The lead image of a feature project runs edge to edge and is never
+     cropped: any aspect ratio works, and its height follows from it.
+     Preferred ratio: 2:1 (e.g. 4000 x 2000) or wider, so the whole
+     picture fits on screen at once on laptops and desktops; 16:9 is a
+     little taller than most screens. Upload it at least 3000px wide. */
+  .landmark--feature > :global(.feature-lead) :global(img),
+  .landmark--feature > :global(.feature-lead) video {
+    height: auto;
+    object-fit: contain;
+  }
+
+  .cap--center {
+    justify-items: center;
+    text-align: center;
+    margin-inline: var(--edge);
+  }
+
+  .cap--center .prose {
+    text-align: justify;
+  }
+
+  .strip {
+    display: grid;
+    grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  .strip > :global(.media) {
+    aspect-ratio: 4 / 3;
+  }
+
+  @media (max-width: 860px) {
+    .landmark--left,
+    .landmark--right {
+      grid-template-columns: 1fr;
+      width: auto;
+      margin-inline: var(--gutter);
+    }
+
+    .cap {
+      --cap-drift: 2vh; /* stacked under its image: keep the drift small */
+    }
+
+    .landmark--right > .cap,
+    .landmark--right > :not(.cap) {
+      grid-column: 1;
+      grid-row: auto;
+    }
+
+    .landmark > .cap {
+      margin-top: 1rem;
+    }
+
+    .cap--center {
+      margin-inline: var(--gutter);
+      justify-items: start;
+      text-align: left;
+    }
+
+    .strip {
+      grid-template-columns: 1fr;
+      margin-inline: var(--gutter);
+    }
+  }
+</style>

@@ -1,0 +1,91 @@
+/* ============================================================
+   DESIGN TOKENS — change these and the whole site follows.
+   ============================================================ */
+:root {
+  /* colour */
+  --paper: #fafafa;
+  --ink: #111111;            /* headings, UI */
+  --ink-body: #2b2b2b;       /* long-form text */
+  --ink-soft: #6b6b6b;       /* labels, captions */
+  --accent: #76146d;         /* deep purple */
+  --accent-ink: #fafafa;     /* text on accent */
+  --rule: rgb(17 17 17 / 0.14);
+  --rule-strong: rgb(17 17 17 / 0.32);
+  --scrim: rgb(14 14 14 / 0.95);
+
+  /* type */
+  --font-display: 'HN', 'Helvetica Neue', Helvetica, Arial, sans-serif; /* 800 = Heavy, 500 = Medium */
+  --font-body: Georgia, 'Times New Roman', serif;
+
+  --text-ui: 0.875rem;       /* 14px  buttons, labels, captions */
+  --text-small: 0.8125rem;   /* 13px  tags */
+  --text-body: 1.0625rem;    /* 17px  Georgia body */
+  --title-s: clamp(1.75rem, 1.2rem + 1.8vw, 2.75rem);   /* project titles */
+  --title-m: clamp(2.75rem, 1.5rem + 5vw, 6.5rem);      /* project page, about */
+  --title-xl: clamp(3.5rem, 0.5rem + 10.5vw, 12rem);    /* panel heroes */
+  --title-xxl: clamp(4rem, 12.5vw, 15rem);              /* the name on home */
+  --tight: -0.045em;         /* tracking for big Helvetica */
+
+  /* space */
+  --gutter: clamp(1.25rem, 0.5rem + 3vw, 3rem);
+  --edge: clamp(4.75rem, 3rem + 4vw, 7.5rem); /* keeps content clear of the edge arrows */
+  --measure: 60ch;
+  /* The big headings sit on the eyeline (the side arrows too), and each
+     heading + its text is centred as a group, kept --hero-pad clear of
+     the screen edges so the arrows never touch it. */
+  --eyeline: 42dvh;
+  --hero-pad: 10rem;
+  /* THE BIG HEADINGS (Sevan Dalzell, Selected work, Shot on Fujifilm,
+     About me). Play with these two: every hero heading follows.
+     leading = line spacing, as a multiple of the font size (1 = solid).
+     tracking = letter spacing; more negative = tighter. At this weight
+     some pairs (f-i, r-k) only *nearly* touch, so tracking has to be
+     tight enough that they overlap instead of leaving a hairline. */
+  --hero-leading: 0.74;    /* below ~0.72 the k/d/l ascenders hit the line above */
+  --hero-tracking: -0.055em;
+
+  /* motion */
+  --pan-speed: 1.15s;
+  --pan-ease: cubic-bezier(0.65, 0, 0.2, 1);
+}
+
+/* Arrow keys / buttons: the camera has weight. It's pulled to the target
+   by a critically damped spring: quick to get going, then a long, heavy
+   deceleration that never overshoots. (Trackpad/touch/wheel gestures use
+   a livelier spring in plane.ts.) Browsers without linear() easing use
+   the plain curve above. */
+@supports (transition-timing-function: linear(0, 1)) {
+  :root {
+    --pan-ease: linear(
+      0, 0.062 5%, 0.191 10%, 0.337 15%, 0.475 20%, 0.594 25%, 0.692 30%,
+      0.769 35%, 0.829 40%, 0.874 45%, 0.908 50%, 0.952 60%, 0.976 70%,
+      0.988 80%, 0.994 90%, 1
+    );
+  }
+}
+
+/* Night mode: set on <html> between sunset and sunrise (see NIGHT in
+   site.config.ts and the script at the top of Base.astro). */
+:root[data-theme='dark'] {
+  /* Night is the exact negative of day (255 minus each value), so the
+     switch's circles can show it by inverting. Change a day colour →
+     change its partner here to match. */
+  color-scheme: dark;
+  --paper: #050505;          /* = negative of #fafafa */
+  --ink: #eeeeee;            /* = negative of #111111 */
+  --ink-body: #d4d4d4;       /* = negative of #2b2b2b */
+  --ink-soft: #949494;       /* = negative of #6b6b6b */
+  --accent: #d68fce;         /* the purple, lifted so it reads on black (not a negative) */
+  --accent-ink: #050505;
+  --rule: rgb(238 238 238 / 0.14);
+  --rule-strong: rgb(238 238 238 / 0.32);
+  --scrim: rgb(6 6 6 / 0.95);
+}
+
+@media (max-width: 720px) {
+  :root {
+    --edge: 1.25rem; /* on phones the arrows move to the bottom corners */
+    --eyeline: 40dvh;
+    --hero-pad: var(--gutter);
+  }
+}

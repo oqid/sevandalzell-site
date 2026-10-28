@@ -1,0 +1,50 @@
+/* ============================================================
+   FONTS
+   Helvetica Neue LT Pro is a commercial font. Its files live in
+   public/fonts/helvetica-neue/, which is git-ignored so they are
+   never published by accident (see README → Fonts). Where the files
+   aren't present, the stack in tokens.css falls back to the system's
+   Helvetica Neue / Helvetica / Arial.
+
+   font-display: block → text waits for the real font instead of
+   showing a fallback and then jumping when the font arrives.
+   ============================================================ */
+@font-face {
+  font-family: 'HN';
+  src: url('/fonts/helvetica-neue/Md.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'HN';
+  src: url('/fonts/helvetica-neue/MdIt.woff2') format('woff2');
+  font-weight: 500;
+  font-style: italic;
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'HN';
+  src: url('/fonts/helvetica-neue/Bd.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'HN';
+  src: url('/fonts/helvetica-neue/Hv.woff2') format('woff2');
+  font-weight: 800;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'HN';
+  src: url('/fonts/helvetica-neue/HvIt.woff2') format('woff2');
+  font-weight: 800;
+  font-style: italic;
+  font-display: block;
+}

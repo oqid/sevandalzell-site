@@ -1,0 +1,94 @@
+---
+/* The first screen of a panel: a huge heading on the eyeline, with a
+   short note right beside it, centred together as one group.
+
+   The heading marked data-hero is the one that floats on the near layer:
+   plane.ts copies it there and parallaxes it. This copy stays in place,
+   invisible, for layout and screen readers. */
+interface Props {
+  lines: string[];
+  hint?: string;
+}
+const { lines, hint = 'scroll to explore ↓' } = Astro.props;
+---
+
+<header class="hero">
+  <div class="group">
+    <h1 class="hero-title" data-hero>{lines.map((l) => <span>{l}</span>)}</h1>
+    <div class="hero-side">
+      <div class="hero-body">
+        <slot />
+      </div>
+      {hint && <p class="hint label">{hint}</p>}
+    </div>
+  </div>
+</header>
+
+<style>
+  .hero {
+    position: relative;
+    min-height: 100dvh;
+  }
+
+  /* centred on the eyeline */
+  .group {
+    position: absolute;
+    top: var(--eyeline);
+    left: 50%;
+    translate: -50% -50%;
+    width: max-content;
+    max-width: calc(100% - 2 * var(--hero-pad));
+    display: flex;
+    flex-wrap: wrap; /* not enough room beside → the note drops below */
+    align-items: flex-end;
+    gap: 1.5rem clamp(2rem, 3.5vw, 3.5rem);
+  }
+
+  .hero-title {
+    font-size: var(--title-xl);
+    line-height: var(--hero-leading);
+    letter-spacing: var(--hero-tracking);
+    padding-top: 0.08em; /* the tight leading would otherwise clip the caps' box */
+  }
+
+  .hero-title span {
+    display: block;
+  }
+
+  .hero-side {
+    display: grid;
+    gap: 1.25rem;
+    max-width: 34ch;
+    padding-bottom: 0.2em;
+  }
+
+  .hero-body {
+    font-size: 1.0625rem;
+    line-height: 1.5;
+    text-align: justify;
+    hyphens: auto;
+  }
+
+  /* The bob moves `top`, not `translate`. A moving translate gets its
+     own GPU layer, painted once and then slid by fractions of a pixel,
+     which the GPU smears (fuzzy mid-move, crisp only at the ends).
+     Moving `top` repaints the text each frame on whole pixels instead:
+     always crisp, and a few words cost nothing to repaint. */
+  .hint {
+    position: relative;
+    top: 0; /* needs a number to animate from ('auto' would just jump) */
+    animation: bob 2.4s ease-in-out infinite;
+  }
+
+  @keyframes bob {
+    50% {
+      top: 5px;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .hero-title {
+      font-size: 17vw;
+    }
+  }
+</style>

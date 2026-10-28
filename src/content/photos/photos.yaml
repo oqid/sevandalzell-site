@@ -1,0 +1,14 @@
+# Photography — one entry per photo. Put the image file in this folder,
+# then add an entry below. Order here = order on the page.
+#
+# - id: revue-dress-rehearsal        # any unique name, no spaces
+#   image: ./revue-dress-rehearsal.jpg
+#   title: Dress rehearsal
+#   alt: Dancers mid-leap under blue stage light   # describe the photo
+#   camera: Fujifilm X-T30           # optional
+#   lens: 35mm f/1.4                 # optional
+#   date: 2026-07                    # optional (2026, 2026-07 or 2026-07-14)
+#   client: The Engineering Revue    # optional: who it was shot for
+#
+# The list is empty for now, so the page shows its "coming soon" state.
+[]

@@ -1,0 +1,169 @@
+---
+/* (0, 1): about. First screen: heading on the eyeline with the portrait
+   beside it; scroll for the rest. */
+import { Image } from 'astro:assets';
+import portrait from '../../assets/portrait.avif';
+import { SITE } from '../../site.config';
+---
+
+<div class="about">
+  <header class="top">
+    <div class="group">
+      <h1 class="title" data-hero><span>About</span><span>me</span></h1>
+      <div class="side">
+        <div class="portrait-frame" data-photo>
+        <Image
+          class="portrait"
+          src={portrait}
+          alt="Portrait of Sevan Dalzell"
+          width={1000}
+          widths={[320, 480, 800, 1000]}
+          sizes="(max-width: 720px) 50vw, 26rem"
+          loading="eager"
+        />
+        </div>
+        <p class="hint label">more about me ↓</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="text">
+    <div class="prose">
+      <p>
+        My name is Sevan Dalzell and I'm a final-year BE(Hons) Mechatronics Engineering student at the University of Auckland, finishing up papers in robotics &amp; intelligent systems, industrial automation and control. I'm passionate about projects where engineering disciplines integrate. That mindset is the backbone of my creative hobbies too, like photography: an intersection of mechanical, electrical and software engineering with art and design.
+      </p>
+      <p>
+        This year I have the privilege of being Video Co-Director for <a href="https://engrevue.co.nz/">The Engineering Revue</a>, as well as a marketing executive for <a href="https://rainbowengineering.wdcc.co.nz/">Rainbow Engineering</a>. One of my biggest takeaways from studying engineering so far is that community is fundamental to good engineering: the best ideas emerge when people with different perspectives support, challenge and learn from one another.
+      </p>
+    </div>
+
+    <ul class="contact label">
+      <li><a href={`mailto:${SITE.email}`}>{SITE.email}</a></li>
+      <li><a href={SITE.linkedin} rel="noopener">LinkedIn</a></li>
+    </ul>
+
+    <a class="cv" href={SITE.cv} target="_blank" rel="noopener">
+      View CV
+      <svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true">
+        <path d="M3.5 2.5h6v6M9.5 2.5 2.5 9.5" fill="none" stroke="currentColor" stroke-width="1.5"></path>
+      </svg>
+    </a>
+  </div>
+</div>
+
+<style>
+  .top {
+    position: relative;
+    min-height: 100dvh;
+  }
+
+  .group {
+    position: absolute;
+    top: var(--eyeline);
+    left: 50%;
+    translate: -50% -50%;
+    width: max-content;
+    max-width: calc(100% - 2 * var(--hero-pad));
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1.5rem clamp(2rem, 3.5vw, 3.5rem);
+  }
+
+  .title {
+    font-size: var(--title-xl);
+    line-height: var(--hero-leading);
+    letter-spacing: var(--hero-tracking);
+    padding-top: 0.08em;
+  }
+
+  .title span {
+    display: block;
+  }
+
+  .side {
+    display: grid;
+    gap: 0.9rem;
+  }
+
+  .portrait-frame {
+    justify-self: start;
+  }
+
+  .side :global(.portrait) {
+    height: min(50dvh, 30rem);
+    width: auto;
+    aspect-ratio: 3 / 4;
+    object-fit: cover;
+    object-position: 50% 30%;
+  }
+
+  /* The bob moves `top`, not `translate`. A moving translate gets its
+     own GPU layer, painted once and then slid by fractions of a pixel,
+     which the GPU smears (fuzzy mid-move, crisp only at the ends).
+     Moving `top` repaints the text each frame on whole pixels instead:
+     always crisp, and a few words cost nothing to repaint. */
+  .hint {
+    position: relative;
+    top: 0; /* needs a number to animate from ('auto' would just jump) */
+    animation: bob 2.4s ease-in-out infinite;
+  }
+
+  @keyframes bob {
+    50% {
+      top: 5px;
+    }
+  }
+
+  /* reading column, centred under the heading group */
+  .text {
+    max-width: calc(var(--measure) + 2 * var(--hero-pad));
+    margin-inline: auto;
+    padding: 2rem var(--hero-pad) 10rem;
+  }
+
+  .contact {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    margin-top: 1.5rem;
+    padding: 0;
+    list-style: none;
+    color: var(--ink);
+  }
+
+  .cv {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 1.75rem;
+    padding: 0.7rem 1.05rem;
+    border-radius: 3px;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: var(--text-ui);
+    text-decoration: none;
+    transition: background-color 0.25s ease;
+  }
+
+  .cv:hover,
+  .cv:focus-visible {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  @media (max-width: 720px) {
+    .group {
+      align-items: flex-start;
+    }
+    .side :global(.portrait) {
+      height: auto;
+      width: min(45vw, 12rem);
+    }
+    .title {
+      font-size: 17vw;
+    }
+  }
+</style>

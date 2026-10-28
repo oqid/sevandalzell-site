@@ -1,0 +1,30 @@
+# build output
+dist/
+.astro/
+
+# dependencies
+node_modules/
+
+# logs and local env
+npm-debug.log*
+.env
+.env.*
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+
+# Helvetica Neue LT Pro is licensed for desktop use only; keep it out of the
+# public repo unless you buy a web licence (see README, Fonts).
+public/fonts/helvetica-neue/
+
+# Notes between Claude sessions (see HANDOVER.md itself)
+HANDOVER.md
+
+# Old CV (superseded by Sevan-Dalzell-CV-2026.pdf) and an unused image.
+# Both are read-only on this PC; ignoring them keeps them out of the repo
+# and therefore off the deployed site.
+public/Sevan-Dalzell-CV.pdf
+src/content/projects/artificial-heart/tah_contents.avif

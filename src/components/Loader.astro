@@ -1,0 +1,122 @@
+---
+/* The loading screen. Plays on every fresh visit and reload (or stays up
+   permanently while SITE.underConstruction is on). It also covers the
+   page while fonts load, so nothing visibly jumps. Two looks, picked
+   with SITE.loader in site.config.ts:
+   • mark: "vii" flickering, as big as the home page's name, sat right in
+     the bottom-left corner of the screen
+   • dots: seven circles (vii) popping in one after another, in a
+     column down the left side, top to bottom */
+import { SITE } from '../site.config';
+const year = new Date().getFullYear();
+const variant = SITE.loader;
+const dots = Array.from({ length: 7 }, (_, i) => i);
+---
+
+<div id="loader" data-variant={variant} data-construction={SITE.underConstruction ? 'true' : undefined} aria-hidden="true">
+  {
+    variant === 'mark' ? (
+      <p class="loader-mark">{SITE.mark}</p>
+    ) : (
+      <div class="dots">
+        {dots.map((i) => <span class="dot" style={`--i:${i}`} />)}
+      </div>
+    )
+  }
+  {SITE.underConstruction && <p class="loader-sub label">under construction... back soon!</p>}
+  <p class="loader-foot label">{SITE.name} {year}</p>
+</div>
+
+<style>
+  #loader {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    overflow: hidden;
+    background: var(--paper);
+    color: var(--ink);
+    transition: opacity 0.7s ease, visibility 0s linear 0.7s;
+  }
+
+  :global(.skip-loader) #loader,
+  #loader.is-done {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  :global(.skip-loader) #loader {
+    transition: none;
+  }
+
+  .loader-foot,
+  .loader-sub {
+    position: absolute;
+    right: var(--gutter);
+    bottom: var(--gutter);
+  }
+
+  .loader-sub {
+    bottom: calc(var(--gutter) + 1.5rem);
+  }
+
+  /* ---------- mark: "vii", flush in the bottom-left corner ---------- */
+  .loader-mark {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    margin: 0 0 -0.012em -0.055em; /* Helvetica's own spacing around the letters, measured */
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: var(--title-xxl);
+    line-height: 0.74;
+    letter-spacing: var(--hero-tracking);
+  }
+
+  /* Browsers that can trim the line box to the letters get an exact fit:
+     the baseline sits on the screen's bottom edge. */
+  @supports (text-box: trim-both cap alphabetic) {
+    .loader-mark {
+      line-height: 1;
+      margin-bottom: 0;
+      text-box: trim-both cap alphabetic;
+    }
+  }
+
+  /* ---------- dots: seven circles down the left side ---------- */
+  .dots {
+    --margin: clamp(1.25rem, 4vh, 3rem); /* clear of the screen edges */
+    --gap: 0.5;                          /* space between circles, as a fraction of one */
+    /* as big as they can be while all seven fit the height */
+    --size: calc((100dvh - 2 * var(--margin)) / (7 + 6 * var(--gap)));
+    position: absolute;
+    top: var(--margin);
+    bottom: var(--margin);
+    left: var(--margin);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .dot {
+    width: var(--size);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--ink);
+    opacity: 0;
+    /* each one fades in quickly, 160ms after the one before
+       (timings mirrored in LOADER in site.ts) */
+    animation: dot-on 150ms ease-out calc(var(--i) * 160ms) forwards;
+  }
+
+  @keyframes dot-on {
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* still loading: site.ts blinks the last dot by toggling this */
+  .dot.is-off {
+    visibility: hidden;
+  }
+</style>

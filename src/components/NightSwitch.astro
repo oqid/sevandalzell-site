@@ -1,0 +1,193 @@
+---
+/* Night mode's corner switch (top right, day and night).
+   A small moon or sun with a little drawer beside it that says which
+   mode it is, the sunset/sunrise times, and offers the other mode.
+   • the first page of the night: the drawer slides open by itself, then shuts
+     (by day it doesn't, the icon just shows on landing and fades)
+   • hover (or tap) the moon: the drawer slides out again
+   • left alone, the whole thing fades away; it's still there, so
+     hovering where it was brings it back, and so does arriving on a page
+   Timings live in site.ts (NIGHT_UI). */
+---
+
+<div class="night" data-night hidden>
+  <div class="drawer" id="night-drawer">
+    <span class="what swap">
+      <span class="at-night by-night">night mode</span><span class="at-day by-night">day until sunrise</span>
+      <span class="at-day by-day">day mode</span><span class="at-night by-day">night until sunset</span>
+    </span>
+    <span class="times">
+      <span class="set">
+        <svg viewBox="0 0 20 14" aria-hidden="true"><path d="M1 12h18M5 12a5 5 0 0 1 10 0M10 1v4.5M7.8 3.3 10 5.5l2.2-2.2" /></svg>
+        <span class="sr">sunset</span><time data-sunset></time>
+      </span>
+      <span class="rise">
+        <svg viewBox="0 0 20 14" aria-hidden="true"><path d="M1 12h18M5 12a5 5 0 0 1 10 0M10 5.5V1M7.8 3.2 10 1l2.2 2.2" /></svg>
+        <span class="sr">sunrise</span><time data-sunrise></time>
+      </span>
+    </span>
+    <button type="button" class="flip swap" data-night-flip><span class="at-night">day</span><span class="at-day">night</span></button>
+  </div>
+  <button type="button" class="icon" data-night-icon aria-expanded="false" aria-controls="night-drawer" aria-label="Night mode">
+    <svg class="moon" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 10.2A6 6 0 0 1 5.8 2.5a6 6 0 1 0 7.7 7.7Z" /></svg>
+    <svg class="sun" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.9" /><path d="M8 1v1.8M8 13.2V15M1 8h1.8M13.2 8H15M3 3l1.3 1.3M11.7 11.7 13 13M3 13l1.3-1.3M11.7 4.3 13 3" /></svg>
+  </button>
+</div>
+
+<style>
+  .night {
+    position: fixed;
+    top: 0.75rem;
+    right: 0.75rem;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem; /* a slightly bigger hover target than the icon */
+    transition: opacity 0.9s ease;
+  }
+
+  .night[hidden] {
+    display: none;
+  }
+
+  /* faded out, but still there to be found by the mouse */
+  .night.is-idle:not(:hover):not(:has(:focus-visible)) {
+    opacity: 0;
+  }
+
+  .icon {
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    color: var(--ink-soft);
+    transition: color 0.25s ease, background-color 0.25s ease;
+  }
+
+  .icon:hover,
+  .icon:focus-visible {
+    color: var(--ink);
+    background: var(--rule);
+  }
+
+  .icon svg {
+    grid-area: 1 / 1;
+    width: 0.95rem;
+    height: 0.95rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.4;
+    stroke-linecap: round;
+  }
+
+  :global(html[data-theme='dark']) .sun,
+  :global(html:not([data-theme='dark'])) .moon {
+    display: none;
+  }
+
+  /* the drawer slides out from behind the icon */
+  .drawer {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.35rem 0.4rem 0.35rem 0.7rem;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--paper) 92%, transparent);
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 0.75rem;
+    line-height: 1;
+    white-space: nowrap;
+    color: var(--ink-soft);
+    clip-path: inset(-1px -1px -1px 100%);
+    translate: 0.75rem 0;
+    opacity: 0;
+    pointer-events: none;
+    transition: clip-path 0.45s var(--pan-ease), translate 0.45s var(--pan-ease), opacity 0.3s ease;
+  }
+
+  .night.is-open .drawer {
+    clip-path: inset(-1px);
+    translate: 0 0;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .what {
+    color: var(--ink);
+  }
+
+  /* Both versions of a label sit in the same spot and only the current
+     one shows, so each is always as wide as its longer version and
+     nothing resizes when you switch. */
+  .swap {
+    display: inline-grid;
+    justify-items: center;
+  }
+
+  .swap > span {
+    grid-area: 1 / 1;
+  }
+
+  .what.swap {
+    justify-items: start;
+  }
+
+  :global(html[data-theme='dark']) .at-day,
+  :global(html:not([data-theme='dark'])) .at-night,
+  [data-period='day'] .by-night,
+  [data-period='night'] .by-day {
+    visibility: hidden;
+  }
+
+  .times {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .times > span {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  /* in time order: sunset then sunrise by night, sunrise then sunset by day */
+  [data-period='day'] .rise {
+    order: -1;
+  }
+
+  .times svg {
+    width: 1rem;
+    height: 0.7rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.4;
+  }
+
+  .flip {
+    padding: 0.3rem 0.5rem;
+    border-radius: 2px;
+    font-size: inherit;
+    color: var(--ink);
+    background: var(--rule);
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  .flip:hover,
+  .flip:focus-visible {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+</style>

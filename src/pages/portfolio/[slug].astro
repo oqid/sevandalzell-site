@@ -1,0 +1,145 @@
+---
+/* One page per project, built from its markdown file. */
+import { render } from 'astro:content';
+import { getImage } from 'astro:assets';
+import Page from '../../layouts/Page.astro';
+import Media from '../../components/Media.astro';
+import YouTube from '../../components/YouTube.astro';
+import Tags from '../../components/Tags.astro';
+import { getProjects, formatPeriod, type Project } from '../../lib/projects';
+
+export async function getStaticPaths() {
+  const projects = await getProjects();
+  return projects.map((project, i) => ({
+    params: { slug: project.id },
+    props: { project, prev: projects[i - 1], next: projects[i + 1] },
+  }));
+}
+
+interface Props {
+  project: Project;
+  prev?: Project;
+  next?: Project;
+}
+
+const { project, prev, next } = Astro.props;
+const { data } = project;
+const { Content } = await render(project);
+const firstImage = data.media.find((m) => 'image' in m);
+const ogImage =
+  firstImage && 'image' in firstImage
+    ? (await getImage({ src: firstImage.image, width: 1200, height: 630, fit: 'cover', format: 'jpeg' })).src
+    : undefined;
+const plain = project.body?.replace(/[*_[\]#>]|\(http[^)]*\)/g, '').trim().split('\n')[0].slice(0, 155);
+---
+
+<Page place="project" title={data.title} description={plain} image={ogImage}>
+  <article class="project">
+    <header class="head">
+      <p class="label">{formatPeriod(data)}</p>
+      <h1>{data.title}</h1>
+      {data.role && <p class="role label">{data.role}</p>}
+      <Tags tags={data.tags} />
+    </header>
+
+    <div class="prose body">
+      <Content />
+    </div>
+
+    <div class="gallery">
+      {
+        data.media.map((m, i) => (
+          <Media item={m} sizes="(max-width: 720px) 92vw, 60vw" eager={i === 0} overlayCaption={false} />
+        ))
+      }
+      {data.film && <YouTube id={data.film.youtube} title={data.film.title} poster={data.film.poster} sizes="(max-width: 720px) 92vw, 60vw" />}
+    </div>
+
+    <nav class="pager label" aria-label="More projects">
+      {prev ? <a href={`/portfolio/${prev.id}/`} rel="prev">← {prev.data.title}</a> : <span />}
+      {next && <a href={`/portfolio/${next.id}/`} rel="next">{next.data.title} →</a>}
+    </nav>
+  </article>
+</Page>
+
+<style>
+  .project {
+    max-width: 72rem;
+    margin-inline: auto;
+    padding: 7rem var(--edge) 6rem;
+  }
+
+  .head {
+    display: grid;
+    justify-items: center;
+    gap: 0.6rem;
+    margin-bottom: 3rem;
+    text-align: center;
+  }
+
+  .head :global(.tags) {
+    justify-content: center;
+  }
+
+  h1 {
+    font-size: var(--title-m);
+    line-height: 0.9;
+    max-width: 16ch;
+    margin-block: 0.3rem 0.4rem;
+    text-wrap: balance;
+  }
+
+  .role {
+    color: var(--accent);
+  }
+
+  .body {
+    margin-inline: auto;
+    margin-bottom: 4.5rem;
+    font-size: 1.125rem;
+  }
+
+  .gallery {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2.5rem 1.25rem;
+    align-items: start;
+  }
+
+  /* lead item spans the full width */
+  .gallery > :global(.media:first-child),
+  .gallery > :global(.yt) {
+    grid-column: 1 / -1;
+  }
+
+  /* an odd one out at the end spans the full width too */
+  .gallery > :global(.media:last-child:nth-child(even)) {
+    grid-column: 1 / -1;
+  }
+
+  .pager {
+    display: flex;
+    justify-content: space-between;
+    gap: 2rem;
+    margin-top: 5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--rule);
+  }
+
+  .pager a {
+    text-decoration: none;
+  }
+
+  @media (max-width: 720px) {
+    .project {
+      padding-inline: var(--gutter);
+    }
+    .gallery {
+      grid-template-columns: 1fr;
+    }
+    .pager {
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+  }
+</style>

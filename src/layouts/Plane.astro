@@ -1,0 +1,211 @@
+---
+/* The plane: home, portfolio, photography and about laid out side by
+   side on one big surface. The view pans between them, and every
+   position has its own URL (/, /portfolio/, …). Every one of those URLs
+   renders this same layout, just starting at a different place. */
+import Base from './Base.astro';
+import EdgeNav from '../components/EdgeNav.astro';
+import HomePanel from '../components/panels/HomePanel.astro';
+import PortfolioPanel from '../components/panels/PortfolioPanel.astro';
+import PhotographyPanel from '../components/panels/PhotographyPanel.astro';
+import AboutPanel from '../components/panels/AboutPanel.astro';
+import { SITE, PLACES, ROUTES, SHORTCUTS, PARALLAX, type PlaceKey } from '../site.config';
+
+interface Props {
+  start: PlaceKey;
+  description?: string;
+}
+const { start, description } = Astro.props;
+
+const keys = (Object.keys(PLACES) as PlaceKey[]).filter((k) => PLACES[k].plane);
+const minX = Math.min(...keys.map((k) => PLACES[k].x));
+const minY = Math.min(...keys.map((k) => PLACES[k].y));
+const cols = Math.max(...keys.map((k) => PLACES[k].x)) - minX + 1;
+const rows = Math.max(...keys.map((k) => PLACES[k].y)) - minY + 1;
+const cell = (k: PlaceKey) => ({ x: PLACES[k].x - minX, y: PLACES[k].y - minY });
+
+// How much further the near layer (big headings) moves than the page.
+const depth = +(PARALLAX.bodyDistanceCm / PARALLAX.headingDistanceCm).toFixed(3);
+
+// Everything plane.ts needs to know, handed over as JSON.
+const map = {
+  depth,
+  siteName: SITE.name,
+  places: Object.fromEntries(keys.map((k) => [k, { ...cell(k), path: PLACES[k].path, title: PLACES[k].title }])),
+  routes: Object.fromEntries(keys.map((k) => [k, { ...ROUTES[k], ...(SHORTCUTS[k] ?? {}) }])),
+};
+
+const panels: Record<string, any> = {
+  home: HomePanel,
+  portfolio: PortfolioPanel,
+  photography: PhotographyPanel,
+  about: AboutPanel,
+};
+
+const s = cell(start);
+---
+
+<Base kind="plane" title={PLACES[start].title || undefined} description={description}>
+  <div
+    id="stage"
+    style={`--depth:${depth};timeline-scope:${keys.map((k) => `--scroll-${k}`).join(',')}`}
+  >
+  <EdgeNav places={keys} active={start} plane />
+  <main id="world" data-start={start} style={`--cols:${cols};--rows:${rows};--tx:${-s.x};--ty:${-s.y}`}>
+    {
+      keys.map((k) => {
+        const Panel = panels[k];
+        const c = cell(k);
+        return (
+          <section
+            class="panel"
+            id={`panel-${k}`}
+            data-place={k}
+            aria-label={PLACES[k].label}
+            tabindex="-1"
+            style={`--px:${c.x};--py:${c.y};scroll-timeline:--scroll-${k} block`}
+            inert={k !== start}
+          >
+            <Panel />
+          </section>
+        );
+      })
+    }
+  </main>
+  <!-- the near layer: plane.ts copies each panel's data-hero heading here -->
+  <div id="near" aria-hidden="true"></div>
+  </div>
+  <script type="application/json" id="plane-map" set:html={JSON.stringify(map)} />
+  <script>
+    import '../scripts/plane';
+  </script>
+</Base>
+
+<style>
+  :global(html[data-kind='plane']),
+  :global(html[data-kind='plane'] body) {
+    height: 100%;
+    overflow: hidden;
+    scrollbar-gutter: auto;
+  }
+
+  #world {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: calc(var(--cols) * 100vw);
+    height: calc(var(--rows) * 100dvh);
+    transform: translate(calc(var(--tx) * 100vw), calc(var(--ty) * 100dvh));
+    transition: transform var(--pan-speed) var(--pan-ease);
+    will-change: transform;
+  }
+
+  /* The camera position. Registered as non-inheriting so that moving it
+     every frame (gestures) only restyles the elements that actually move. */
+  @property --tx {
+    syntax: '<number>';
+    inherits: false;
+    initial-value: 0;
+  }
+
+  @property --ty {
+    syntax: '<number>';
+    inherits: false;
+    initial-value: 0;
+  }
+
+  /* first paint: jump straight to the starting place */
+  :global(html:not(.plane-ready)) #world {
+    transition: none;
+  }
+
+  /* a gesture is driving the camera frame by frame: no transitions */
+  :global(html.js-cam) #world,
+  :global(html.js-cam .near-item) {
+    transition: none;
+  }
+
+  /* ---------- the near layer ----------
+     Each heading sits at its panel's coordinate × depth, so a pan moves it
+     `depth` times as far as the page. Scrolling adds its own offset
+     (the `translate` property, set by plane.ts). */
+  #near {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    overflow: hidden;
+    pointer-events: none;
+    visibility: hidden;
+  }
+
+  :global(html.hero-ready) #near {
+    visibility: visible;
+  }
+
+  :global(.near-item) {
+    position: absolute;
+    margin: 0;
+    transform: translate(
+      calc((var(--tx) + var(--cx)) * var(--depth) * 100vw),
+      calc((var(--ty) + var(--cy)) * var(--depth) * 100dvh)
+    );
+    transition: transform var(--pan-speed) var(--pan-ease);
+    will-change: transform, translate;
+  }
+
+  :global(html:not(.plane-ready) .near-item) {
+    transition: none;
+  }
+
+  /* Scrolling: the heading moves `depth` px for every px the panel scrolls,
+     driven by the panel's scroll position on the compositor (no lag).
+     Mapped over the first 4000px of scroll; it's long gone by then. */
+  :global(html.css-parallax .near-item) {
+    animation: near-scroll linear both;
+    animation-timeline: var(--timeline);
+    animation-range: 0px 4000px;
+  }
+
+  @keyframes near-scroll {
+    from {
+      translate: 0 0;
+    }
+    to {
+      translate: 0 calc(-4000px * var(--scroll-depth, var(--depth)));
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #stage {
+      --scroll-depth: 1; /* headings just scroll with the page */
+    }
+  }
+
+  .panel:focus {
+    outline: none;
+  }
+
+  /* the in-page originals stay for layout and screen readers, unseen */
+  :global(html.hero-ready [data-hero]) {
+    opacity: 0;
+  }
+
+  .panel {
+    position: absolute;
+    left: calc(var(--px) * 100vw);
+    top: calc(var(--py) * 100dvh);
+    width: 100vw;
+    height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* no scrollbar: it would take a strip off the right edge, and
+       full-width images should reach both edges of the screen */
+    scrollbar-width: none;
+    touch-action: pan-y; /* sideways drags pan the camera (plane.ts) */
+  }
+
+  .panel::-webkit-scrollbar {
+    display: none;
+  }
+</style>

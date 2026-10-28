@@ -1,0 +1,22 @@
+---
+/* A normal scrolling page off the plane (project pages, 404). */
+import Base from './Base.astro';
+import EdgeNav from '../components/EdgeNav.astro';
+import type { PlaceKey } from '../site.config';
+
+interface Props {
+  place: PlaceKey;
+  title?: string;
+  description?: string;
+  image?: string;
+  nav?: boolean;
+}
+const { place, title, description, image, nav = true } = Astro.props;
+---
+
+<Base kind="page" title={title} description={description} image={image}>
+  {nav && <EdgeNav places={[place]} active={place} />}
+  <main id="main">
+    <slot />
+  </main>
+</Base>

@@ -1,0 +1,32 @@
+---
+/* (1, 0): selected work. */
+import PageHero from '../PageHero.astro';
+import ProjectLandmark from '../ProjectLandmark.astro';
+import { getProjects } from '../../lib/projects';
+
+const projects = await getProjects();
+
+// Standard projects alternate sides; feature projects span the width
+// and don't count towards the alternation.
+let n = 0;
+const items = projects.map((project) => {
+  const side = project.data.display === 'feature' ? 'left' : n++ % 2 === 0 ? 'left' : 'right';
+  return { project, side } as const;
+});
+---
+
+<PageHero lines={['Selected', 'work']} hint="dramatic reveal ↓">
+  <p>
+    A handful of projects from my coursework, professional experience, personal life and club contributions. Scroll to explore, or open any project for the full write-up.
+  </p>
+</PageHero>
+
+<div class="landmarks">
+  {items.map(({ project, side }) => <ProjectLandmark project={project} side={side} />)}
+</div>
+
+<style>
+  .landmarks {
+    padding-bottom: 20vh;
+  }
+</style>

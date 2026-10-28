@@ -1,0 +1,26 @@
+---
+import Page from '../layouts/Page.astro';
+---
+
+<Page place="project" title="Not found" nav={false}>
+  <section class="lost">
+    <h1>Off the<br />map</h1>
+    <p class="label">This page doesn't exist. <a href="/">Back to the start</a></p>
+  </section>
+</Page>
+
+<style>
+  .lost {
+    min-height: 100svh;
+    display: grid;
+    align-content: center;
+    gap: 1.5rem;
+    padding: 2rem var(--edge);
+  }
+
+  h1 {
+    font-size: var(--title-xl);
+    line-height: 0.86;
+    letter-spacing: -0.05em;
+  }
+</style>

@@ -1,0 +1,164 @@
+---
+/* Arrows on the edges of the screen, generated from ROUTES in
+   site.config.ts. On the plane every place's arrows are rendered and
+   plane.ts shows the set for wherever the view is headed. */
+import { PLACES, ROUTES, type PlaceKey, type Direction } from '../site.config';
+
+interface Props {
+  places: PlaceKey[];
+  active: PlaceKey;
+  /** on the plane: each place's arrows follow that panel's scroll */
+  plane?: boolean;
+}
+const { places, active, plane = false } = Astro.props;
+
+// The arrows are drawn (not font glyphs) so they sit exactly on the
+// label's midline. One right-pointing arrow, rotated for each direction.
+const rotate: Record<Direction, number> = { right: 0, down: 90, left: 180, up: -90 };
+
+const groups = places.map((place) => ({
+  place,
+  arrows: (Object.entries(ROUTES[place]) as [Direction, PlaceKey][]).map(([dir, to]) => ({
+    dir,
+    to,
+    href: PLACES[to].path,
+    label: PLACES[to].label,
+    rotate: rotate[dir],
+  })),
+}));
+---
+
+<nav class="edgenav" aria-label="Site">
+  {
+    groups.map((g) => (
+      <div
+        class="arrows"
+        data-place={g.place}
+        data-state={g.place === active ? 'visible' : 'hidden'}
+        style={`--timeline:${plane ? `--scroll-${g.place}` : 'scroll(root)'}`}
+      >
+        {g.arrows.map((a) => (
+          <a class={`arrow arrow--${a.dir}`} href={a.href} data-dir={a.dir} data-to={a.to}>
+            <svg class="arrow-glyph" viewBox="0 0 16 16" aria-hidden="true" style={`rotate:${a.rotate}deg`}>
+              <path d="M2 8h11.5M8.5 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6" />
+            </svg>
+            <span class="arrow-label">{a.label}</span>
+          </a>
+        ))}
+      </div>
+    ))
+  }
+</nav>
+
+<style>
+  .arrows[data-state='hidden'] {
+    visibility: hidden;
+  }
+
+  .arrows[data-state='hidden'] .arrow {
+    opacity: 0;
+  }
+
+  .arrow {
+    position: fixed;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.55rem 0.85rem;
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--paper) 86%, transparent);
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: var(--text-ui);
+    letter-spacing: 0.01em;
+    text-decoration: none;
+    color: var(--ink);
+    transition: background-color 0.25s ease, color 0.25s ease, opacity 0.35s ease;
+  }
+
+  .arrow-glyph {
+    display: block;
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .arrow-label {
+    color: var(--ink-soft);
+    transition: color 0.25s ease;
+  }
+
+  .arrow:hover,
+  .arrow:focus-visible {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .arrow:hover .arrow-label,
+  .arrow:focus-visible .arrow-label {
+    color: var(--paper);
+  }
+
+  .arrow:active {
+    background: var(--accent);
+  }
+
+  /* flash when the arrow key for this direction is pressed */
+  .arrow.is-pulsing {
+    animation: pulse 0.5s var(--pan-ease);
+  }
+
+  @keyframes pulse {
+    40% {
+      background: var(--accent);
+      color: var(--accent-ink);
+    }
+  }
+
+  /* label sits at the stem, opposite the arrowhead */
+  /* side arrows sit on the eyeline, level with the big headings */
+  .arrow--left  { left: 1.25rem; top: var(--eyeline); translate: 0 -50%; }
+  .arrow--right { right: 1.25rem; top: var(--eyeline); translate: 0 -50%; flex-direction: row-reverse; }
+  .arrow--down  { bottom: 1.25rem; left: 50%; translate: -50% 0; flex-direction: column-reverse; gap: 0.3rem; }
+  .arrow--up    { top: 1.25rem; left: 50%; translate: -50% 0; flex-direction: column; gap: 0.3rem; }
+
+  /* Scrolling down, the arrows (all but ↓) leave with the first screen,
+     as if printed on the page, and come back when you scroll to the top.
+     So nothing below ever has to make room for them. Driven by the
+     page/panel's scroll on the compositor: 1px up for every 1px scrolled
+     (over the first 3000px; they're long gone by then). Not on phones,
+     where they sit in the bottom corners and stay put. */
+  @media (min-width: 721px) {
+    @supports (animation-timeline: scroll()) {
+      .arrow:not(.arrow--down) {
+        animation: leave-with-page linear both;
+        animation-timeline: var(--timeline);
+        animation-range: 0px 3000px;
+      }
+
+      .arrow.is-pulsing:not(.arrow--down) {
+        animation: leave-with-page linear both, pulse 0.5s var(--pan-ease);
+        animation-timeline: var(--timeline), auto;
+        animation-range: 0px 3000px, normal;
+      }
+    }
+  }
+
+  @keyframes leave-with-page {
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(-3000px);
+    }
+  }
+
+  /* phones: side arrows drop to the bottom corners, out of the text's way */
+  @media (max-width: 720px) {
+    .arrow--left  { left: 0.75rem; top: auto; bottom: 1rem; translate: none; }
+    .arrow--right { right: 0.75rem; top: auto; bottom: 1rem; translate: none; }
+    .arrow--down  { bottom: 1rem; flex-direction: row-reverse; gap: 0.5rem; }
+    .arrow--up    { top: 0.75rem; flex-direction: row; gap: 0.5rem; }
+  }
+</style>

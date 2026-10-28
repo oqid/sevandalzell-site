@@ -1,0 +1,67 @@
+---
+/* (0, 0): the name, set big like a Helvetica Now poster, on the eyeline.
+   The name block (data-hero) floats on the near layer; the sentence
+   beside it stays at arm's length. */
+---
+
+<div class="home">
+  <div class="group">
+    <div class="name-block" data-hero>
+      <p class="hello label">welcome to my website! my name is</p>
+      <h1 class="name"><span>Sevan</span><span>Dalzell</span></h1>
+    </div>
+    <p class="lede">
+      I'm a final-year mechatronics engineering student, passionate about the interplay of design, technology and art.
+    </p>
+  </div>
+</div>
+
+<style>
+  .home {
+    position: relative;
+    min-height: 100%;
+  }
+
+  .group {
+    position: absolute;
+    top: var(--eyeline);
+    left: 50%;
+    translate: -50% -50%;
+    width: max-content;
+    max-width: calc(100% - 2 * var(--hero-pad));
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 1.5rem clamp(1.5rem, 3vw, 3rem);
+  }
+
+  .hello {
+    margin-bottom: 0.4rem;
+  }
+
+  .name {
+    font-size: var(--title-xxl);
+    line-height: var(--hero-leading);
+    letter-spacing: var(--hero-tracking);
+    padding-top: 0.08em;
+    margin-left: -0.05em; /* Helvetica's sidebearing: align the S with the label above */
+  }
+
+  .name span {
+    display: block;
+  }
+
+  .lede {
+    max-width: 22ch;
+    padding-bottom: 0.15em;
+    font-size: clamp(1rem, 0.85rem + 0.45vw, 1.25rem);
+    line-height: 1.45;
+    color: var(--ink-body);
+  }
+
+  @media (max-width: 720px) {
+    .name {
+      font-size: 23vw;
+    }
+  }
+</style>

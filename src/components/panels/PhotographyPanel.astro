@@ -1,0 +1,84 @@
+---
+/* (−1, 0): photography, from src/content/photos/photos.yaml. */
+import { getCollection } from 'astro:content';
+import { Image, getImage } from 'astro:assets';
+import PageHero from '../PageHero.astro';
+
+const photos = await Promise.all(
+  (await getCollection('photos')).map(async (p) => ({
+    ...p.data,
+    id: p.id,
+    full: (await getImage({ src: p.data.image, width: Math.min(2000, p.data.image.width), quality: 78 })).src,
+  })),
+);
+const meta = (p: (typeof photos)[number]) => [p.camera, p.lens].filter(Boolean).join(', ');
+---
+
+<PageHero lines={['Shot on', 'Fujifilm']} hint={photos.length ? 'scroll to reveal ↓' : ''}>
+  <p>
+    A selection of my club and organisational work. As this page grows, I'll add personal work and other projects too.
+  </p>
+  {photos.length === 0 && <p class="empty label">The first roll is still developing. Photos will appear here soon.</p>}
+</PageHero>
+
+{
+  photos.length > 0 && (
+    <div class="mosaic">
+      {photos.map((p) => (
+        <figure class="photo" data-photo data-reveal>
+          <Image
+            src={p.image}
+            alt={p.alt || p.title}
+            width={Math.min(1000, p.image.width)}
+            widths={[400, 700, 1000].filter((w) => w <= p.image.width)}
+            sizes="(max-width: 720px) 92vw, 30vw"
+            loading="lazy"
+            data-lightbox={p.full}
+            data-caption={[p.title, meta(p)].filter(Boolean).join(': ')}
+          />
+          <figcaption>
+            <span class="photo-title">{p.title}</span>
+            {(p.client || meta(p)) && <span class="label">{[p.client, meta(p)].filter(Boolean).join(', ')}</span>}
+          </figcaption>
+        </figure>
+      ))}
+    </div>
+  )
+}
+
+<style>
+  .mosaic {
+    columns: 3 18rem;
+    column-gap: 1rem;
+    padding: 0 var(--edge) 20vh;
+    max-width: 100rem;
+    margin-inline: auto;
+  }
+
+  .photo {
+    break-inside: avoid;
+    margin-bottom: 1.25rem;
+  }
+
+  .photo :global(img) {
+    width: 100%;
+    cursor: zoom-in;
+  }
+
+  figcaption {
+    display: grid;
+    padding-top: 0.5rem;
+  }
+
+  .photo-title {
+    font-family: var(--font-display);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+
+  .empty {
+    margin-top: 1.25rem;
+    color: var(--accent);
+  }
+</style>

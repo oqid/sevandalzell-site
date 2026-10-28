@@ -1,0 +1,169 @@
+---
+/* The HTML shell every page shares: <head>, loader, lightbox, scripts. */
+import '../styles/global.css';
+import { SITE, NIGHT, IS_DEV_DEPLOY } from '../site.config';
+import Loader from '../components/Loader.astro';
+import Lightbox from '../components/Lightbox.astro';
+import NightSwitch from '../components/NightSwitch.astro';
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  /** 'plane' for the panning pages, 'page' for normal scrolling pages */
+  kind: 'plane' | 'page';
+}
+
+const { title, description = SITE.description, image = '/preview.png', kind } = Astro.props;
+const fullTitle = title ? `${title} | ${SITE.name}` : `${SITE.name} | portfolio`;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const ogImage = new URL(image, Astro.site);
+---
+
+<!doctype html>
+<html lang="en-NZ" data-theme="light" data-kind={kind}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    {IS_DEV_DEPLOY && <meta name="robots" content="noindex, nofollow" />}
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={SITE.mark} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    <meta name="theme-color" content="#fafafa" />
+
+    <!-- fetch the fonts straight away so nothing reflows when they land -->
+    <link rel="preload" href="/fonts/helvetica-neue/Hv.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/helvetica-neue/Md.woff2" as="font" type="font/woff2" crossorigin />
+
+    <script is:inline define:vars={{ nightOn: SITE.nightMode, home: NIGHT }}>
+      // Night mode, decided before anything is drawn so there's no flash.
+      // Works out the last and next sunset/sunrise; between a sunset and
+      // the sunrise after it, the site goes dark unless the visitor chose
+      // day for this night. By day it stays light unless they chose night.
+      // A choice is kept in localStorage until the next sunrise or sunset.
+      // site.ts reads window.__night to show the note and the switch.
+      (function () {
+        if (!nightOn) return;
+        var root = document.documentElement;
+        var rad = Math.PI / 180;
+        var lat = home.lat, lon = home.lon;
+        var tz = '';
+        try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) {}
+        if (tz !== home.timeZone) {
+          // Rough place from the time zone: longitude from the standard
+          // UTC offset; hemisphere from which half of the year has DST.
+          var y = new Date().getFullYear();
+          var jan = new Date(y, 0, 1).getTimezoneOffset();
+          var jul = new Date(y, 6, 1).getTimezoneOffset();
+          lon = (-Math.max(jan, jul) / 60) * 15;
+          lat = jan < jul ? -38 : jul < jan ? 45 : 20;
+        }
+        // Sunrise equation (accurate to a minute or two). Returns the
+        // rise and set around the solar noon nearest `ms`, or null when
+        // the sun doesn't set or rise that day (polar summer/winter).
+        function sun(ms) {
+          var n = Math.round(ms / 864e5 + 2440587.5 - 2451545 + 0.0008);
+          var j = n - lon / 360;
+          var m = (357.5291 + 0.98560028 * j) % 360;
+          var c = 1.9148 * Math.sin(m * rad) + 0.02 * Math.sin(2 * m * rad) + 0.0003 * Math.sin(3 * m * rad);
+          var l = (m + c + 282.9372) % 360;
+          var noon = 2451545 + j + 0.0053 * Math.sin(m * rad) - 0.0069 * Math.sin(2 * l * rad);
+          var dec = Math.asin(Math.sin(l * rad) * Math.sin(23.4397 * rad));
+          var cosw = (Math.sin(-0.833 * rad) - Math.sin(lat * rad) * Math.sin(dec)) / (Math.cos(lat * rad) * Math.cos(dec));
+          if (cosw < -1 || cosw > 1) return null;
+          var w = Math.acos(cosw) / rad / 360;
+          var toMs = function (jd) { return (jd - 2440587.5) * 864e5; };
+          return { rise: toMs(noon - w), set: toMs(noon + w) };
+        }
+        var now = Date.now();
+        var events = [];
+        for (var d = -2; d <= 2; d++) {
+          var s = sun(now + d * 864e5);
+          if (s) events.push({ t: s.rise, k: 'rise' }, { t: s.set, k: 'set' });
+        }
+        events.sort(function (a, b) { return a.t - b.t; });
+        var last = null, next = null;
+        for (var i = 0; i < events.length; i++) {
+          if (events[i].t <= now) last = events[i];
+          else if (!next) next = events[i];
+        }
+        var isNight = !!(last && next && last.k === 'set');
+        // by night: the sunset just gone and the sunrise to come; by day:
+        // the sunrise just gone and the sunset to come (0 in polar day/night)
+        var night = {
+          isNight: isNight,
+          sunset: last && next ? (isNight ? last.t : next.t) : 0,
+          sunrise: last && next ? (isNight ? next.t : last.t) : 0,
+          day: !isNight,
+          seen: false,
+        };
+        try {
+          var saved = JSON.parse(localStorage.getItem('night') || 'null');
+          var until = Math.round((isNight ? night.sunrise : night.sunset) / 6e4);
+          if (saved && until && saved.until === until) {
+            night.day = !!saved.day;
+            night.seen = true;
+          }
+        } catch (e) {}
+        window.__night = night;
+        if (!night.day) root.dataset.theme = 'dark';
+      })();
+    </script>
+    <script is:inline>
+      // Runs before anything is drawn.
+      (function () {
+        var root = document.documentElement;
+        root.classList.add('js');
+
+        // The loader plays on every fresh visit or reload, but not when
+        // you move between pages of this site.
+        var nav = (performance.getEntriesByType('navigation')[0] || {}).type;
+        var internal = false;
+        try {
+          internal = !!document.referrer && new URL(document.referrer).origin === location.origin;
+        } catch (e) {}
+        if (internal && nav !== 'reload') root.classList.add('skip-loader');
+
+        // Which way to pan when arriving from another page of the site.
+        window.addEventListener('pagereveal', function (e) {
+          if (!e.viewTransition || !internal) return;
+          var from = new URL(document.referrer).pathname;
+          var isProject = function (p) { return /^\/portfolio\/[^/]+\/?$/.test(p); };
+          var here = location.pathname;
+          var type = '';
+          if (isProject(here) && !isProject(from)) type = 'pan-down';
+          else if (!isProject(here) && isProject(from)) type = 'pan-up';
+          else if (isProject(here) && isProject(from)) {
+            // prev/next links between projects store which way they go
+            try { type = sessionStorage.getItem('pan-dir') || 'pan-right'; } catch (err) {}
+          }
+          try { sessionStorage.removeItem('pan-dir'); } catch (err) {}
+          if (type) e.viewTransition.types.add(type);
+        });
+      })();
+    </script>
+  </head>
+  <body>
+    <Loader />
+    {!SITE.underConstruction && <slot />}
+    <Lightbox />
+    {SITE.nightMode && <NightSwitch />}
+    <script>
+      import '../scripts/site';
+    </script>
+  </body>
+</html>

@@ -1,0 +1,101 @@
+---
+/* The night-mode note on the home page. Hidden unless it's night (site.ts
+   fills in tonight's times and shows it). Clicking it switches to day
+   until sunrise; after that the small switch in the corner takes over. */
+---
+
+<button type="button" class="night-note label" data-night-note hidden>
+  <span class="zzz">zzz</span>
+  <span>night mode</span>
+  <span class="times">
+    <svg viewBox="0 0 20 14" aria-hidden="true"><path d="M1 12h18M5 12a5 5 0 0 1 10 0M10 1v4.5M7.8 3.3 10 5.5l2.2-2.2" /></svg>
+    <span class="sr">sunset</span><time data-sunset></time>
+    <svg viewBox="0 0 20 14" aria-hidden="true"><path d="M1 12h18M5 12a5 5 0 0 1 10 0M10 5.5V1M7.8 3.2 10 1l2.2 2.2" /></svg>
+    <span class="sr">sunrise</span><time data-sunrise></time>
+  </span>
+  <span class="switch">switch to day</span>
+</button>
+
+<style>
+  .night-note {
+    position: absolute;
+    top: 1.5rem;
+    left: 50%;
+    translate: -50% 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.55rem 0.9rem;
+    border-radius: 3px;
+    white-space: nowrap;
+    color: var(--ink-soft);
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+
+  .night-note[hidden] {
+    display: none;
+  }
+
+  .zzz {
+    color: var(--accent);
+    letter-spacing: 0.06em;
+  }
+
+  .times {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .times time + svg {
+    margin-left: 0.4rem;
+  }
+
+  svg {
+    width: 1.15rem;
+    height: 0.8rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.4;
+  }
+
+  .switch {
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--rule-strong);
+    text-underline-offset: 0.2em;
+  }
+
+  .night-note:hover,
+  .night-note:focus-visible {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .night-note:hover .switch,
+  .night-note:focus-visible .switch,
+  .night-note:hover .zzz {
+    color: var(--paper);
+  }
+
+  .sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  @media (max-width: 720px) {
+    .night-note {
+      top: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      white-space: normal;
+      width: max-content;
+      max-width: calc(100% - 2rem);
+      row-gap: 0.3rem;
+    }
+  }
+</style>

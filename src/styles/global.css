@@ -1,0 +1,199 @@
+@import './fonts.css';
+@import './tokens.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scrollbar-gutter: stable; /* no sideways jump when a scrollbar appears */
+}
+
+html[data-theme='light'] {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  background: var(--paper);
+  color: var(--ink-body);
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+p,
+figure,
+ul {
+  margin: 0;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 0.95;
+  letter-spacing: var(--tight);
+}
+
+img,
+video {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--rule-strong);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+  transition: color 0.2s ease, text-decoration-color 0.2s ease;
+}
+
+a:hover {
+  color: var(--accent);
+  text-decoration-color: currentColor;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+/* Helvetica Medium: buttons, labels, captions, dates */
+.label {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: var(--text-ui);
+  letter-spacing: 0.005em;
+  line-height: 1.35;
+  color: var(--ink-soft);
+}
+
+/* Georgia body copy, justified */
+.prose {
+  max-width: var(--measure);
+  color: var(--ink-body);
+  text-align: justify;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  text-wrap: pretty;
+}
+
+.prose p + p {
+  margin-top: 0.85em;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------- reveal on scroll (site.ts adds .is-visible) ---------- */
+/* opacity only: any movement here would fight the parallax */
+.js [data-reveal] {
+  opacity: 0;
+  transition: opacity 0.9s ease;
+}
+
+.js [data-reveal].is-visible {
+  opacity: 1;
+}
+
+/* ---------- panning to and from project pages ----------
+   Project pages are separate pages; the browser slides between them
+   (cross-document view transitions; browsers without support just load). */
+@view-transition {
+  navigation: auto;
+}
+
+@keyframes pan-out-up   { to   { transform: translateY(-100vh); } }
+@keyframes pan-in-up    { from { transform: translateY(100vh); } }
+@keyframes pan-out-down { to   { transform: translateY(100vh); } }
+@keyframes pan-in-down  { from { transform: translateY(-100vh); } }
+@keyframes pan-out-left { to   { transform: translateX(-100vw); } }
+@keyframes pan-in-left  { from { transform: translateX(100vw); } }
+@keyframes pan-out-right { to   { transform: translateX(100vw); } }
+@keyframes pan-in-right { from { transform: translateX(-100vw); } }
+
+html:active-view-transition-type(pan-down, pan-up, pan-left, pan-right)::view-transition-old(root),
+html:active-view-transition-type(pan-down, pan-up, pan-left, pan-right)::view-transition-new(root) {
+  mix-blend-mode: normal;
+}
+
+/* travelling down: old page leaves upward, new arrives from below */
+html:active-view-transition-type(pan-down)::view-transition-old(root)  { animation: pan-out-up var(--pan-speed) var(--pan-ease) both; }
+html:active-view-transition-type(pan-down)::view-transition-new(root)  { animation: pan-in-up var(--pan-speed) var(--pan-ease) both; }
+html:active-view-transition-type(pan-up)::view-transition-old(root)    { animation: pan-out-down var(--pan-speed) var(--pan-ease) both; }
+html:active-view-transition-type(pan-up)::view-transition-new(root)    { animation: pan-in-down var(--pan-speed) var(--pan-ease) both; }
+html:active-view-transition-type(pan-right)::view-transition-old(root) { animation: pan-out-left var(--pan-speed) var(--pan-ease) both; }
+html:active-view-transition-type(pan-right)::view-transition-new(root) { animation: pan-in-left var(--pan-speed) var(--pan-ease) both; }
+html:active-view-transition-type(pan-left)::view-transition-old(root)  { animation: pan-out-right var(--pan-speed) var(--pan-ease) both; }
+html:active-view-transition-type(pan-left)::view-transition-new(root)  { animation: pan-in-right var(--pan-speed) var(--pan-ease) both; }
+
+/* ---------- day ↔ night: circles spreading from the switch ----------
+   site.ts grows these from the button. A white disc in 'difference'
+   mode shows the negative of what's under it, which is the other theme. */
+.theme-disc {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: #fff;
+  mix-blend-mode: difference;
+  pointer-events: none;
+  clip-path: circle(0px at 100% 0);
+}
+
+/* Photos shouldn't turn into negatives as a circle passes. Each photo on
+   screen gets its own matching disc inside it, which inverts it first, so
+   the big disc's inversion just turns it back. */
+[data-photo] {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.theme-disc--local {
+  position: absolute;
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
