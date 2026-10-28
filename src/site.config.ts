@@ -79,6 +79,10 @@ export const ROUTES: Record<PlaceKey, Partial<Record<Direction, PlaceKey>>> = {
 export const PARALLAX = {
   headingDistanceCm: 15,
   bodyDistanceCm: 70,
+  // Scrolling a page: how many px the big heading moves per px scrolled.
+  // Kept lower than the pan depth above, or it shoots off the moment you
+  // start scrolling. 1 = it just scrolls with the page.
+  scrollFactor: 2,
 };
 
 // Extra arrow-key moves with no button. Mash ↓ then → fast enough and the

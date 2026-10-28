@@ -281,6 +281,12 @@ const ratio = Math.min(2.2, Math.max(0.62, rawRatio));
     text-align: justify;
   }
 
+  @media (max-width: 720px) {
+    .cap--center .prose {
+      text-align: left;
+    }
+  }
+
   .strip {
     display: grid;
     grid-template-columns: repeat(var(--n), minmax(0, 1fr));

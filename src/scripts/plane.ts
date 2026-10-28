@@ -19,6 +19,7 @@ type Dir = 'left' | 'right' | 'up' | 'down';
 type Axis = 'x' | 'y';
 interface PlaneMap {
   depth: number;
+  scrollDepth: number;
   siteName: string;
   places: Record<string, { x: number; y: number; path: string; title: string }>;
   routes: Record<string, Partial<Record<Dir, string>>>;
@@ -105,7 +106,7 @@ let scrollQueued = false;
 function applyScroll() {
   scrollQueued = false;
   if (cssScroll) return;
-  const k = reduceMotion() ? 1 : map.depth;
+  const k = reduceMotion() ? 1 : map.scrollDepth;
   heroes.forEach(({ copy, panel: p }) => {
     copy.style.translate = `0 ${-p.scrollTop * k}px`;
   });
@@ -443,6 +444,9 @@ let wheelSpent = false; // this stream already moved us: ignore the rest of it
 let edgeAtStart = { up: false, down: false };
 let wheelEndTimer = 0;
 let pending = { x: 0, y: 0 }; // movement so far, before the axis is decided
+let prevAbs = 0; // size of the previous wheel step, to spot a fresh swipe
+let lastPanelScroll = 0;
+document.addEventListener('scroll', () => (lastPanelScroll = performance.now()), { capture: true, passive: true });
 
 window.addEventListener('wheel', (e) => {
   if (e.ctrlKey || document.querySelector('dialog[open]')) return; // ctrl = pinch zoom
@@ -461,6 +465,11 @@ window.addEventListener('wheel', (e) => {
   const dx = e.deltaX * unit;
   const dy = e.deltaY * unit;
   if (dx === 0 && dy === 0) return;
+  // A new swipe during the last one's momentum (Windows trackpads keep
+  // sending it for a long time): the steps suddenly get bigger again.
+  const abs = Math.max(Math.abs(dx), Math.abs(dy));
+  const rising = abs >= 3 && abs > prevAbs * 1.5;
+  prevAbs = abs;
 
   if (wheelSpent) {
     // leftover momentum from a flick that already moved us
@@ -512,7 +521,10 @@ window.addEventListener('wheel', (e) => {
     // of the panel and there's somewhere to go that way.
     const vdir = dir as 'up' | 'down';
     if (!map.routes[current]?.[vdir]) return;
-    if (!atEdge(panel(current), vdir) || !edgeAtStart[vdir]) return;
+    if (!atEdge(panel(current), vdir)) return;
+    // It began at the edge, or the page reached the edge a moment ago
+    // and this is a fresh swipe on top of the momentum.
+    if (!edgeAtStart[vdir] && !(rising && now - lastPanelScroll > 300)) return;
   }
   e.preventDefault();
 

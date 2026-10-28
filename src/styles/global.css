@@ -110,6 +110,14 @@ button {
   margin-top: 0.85em;
 }
 
+/* phones: a narrow column can't be justified without big gaps between
+   words, so the copy is ragged-right there */
+@media (max-width: 720px) {
+  .prose {
+    text-align: left;
+  }
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;

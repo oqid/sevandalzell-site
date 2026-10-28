@@ -69,6 +69,12 @@ const { lines, hint = 'scroll to explore ↓' } = Astro.props;
     hyphens: auto;
   }
 
+  @media (max-width: 720px) {
+    .hero-body {
+      text-align: left;
+    }
+  }
+
   /* The bob moves `top`, not `translate`. A moving translate gets its
      own GPU layer, painted once and then slid by fractions of a pixel,
      which the GPU smears (fuzzy mid-move, crisp only at the ends).

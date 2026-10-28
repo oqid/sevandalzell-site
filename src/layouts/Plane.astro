@@ -30,6 +30,7 @@ const depth = +(PARALLAX.bodyDistanceCm / PARALLAX.headingDistanceCm).toFixed(3)
 // Everything plane.ts needs to know, handed over as JSON.
 const map = {
   depth,
+  scrollDepth: PARALLAX.scrollFactor,
   siteName: SITE.name,
   places: Object.fromEntries(keys.map((k) => [k, { ...cell(k), path: PLACES[k].path, title: PLACES[k].title }])),
   routes: Object.fromEntries(keys.map((k) => [k, { ...ROUTES[k], ...(SHORTCUTS[k] ?? {}) }])),
@@ -73,7 +74,7 @@ const s = cell(start);
     }
   </main>
   <!-- the near layer: plane.ts copies each panel's data-hero heading here -->
-  <div id="near" aria-hidden="true"></div>
+  <div id="near" aria-hidden="true" style={`--scroll-depth:${PARALLAX.scrollFactor}`}></div>
   </div>
   <script type="application/json" id="plane-map" set:html={JSON.stringify(map)} />
   <script>
@@ -157,7 +158,8 @@ const s = cell(start);
     transition: none;
   }
 
-  /* Scrolling: the heading moves `depth` px for every px the panel scrolls,
+  /* Scrolling: the heading moves `scroll-depth` px (PARALLAX.scrollFactor)
+     for every px the panel scrolls,
      driven by the panel's scroll position on the compositor (no lag).
      Mapped over the first 4000px of scroll; it's long gone by then. */
   :global(html.css-parallax .near-item) {
@@ -176,8 +178,8 @@ const s = cell(start);
   }
 
   @media (prefers-reduced-motion: reduce) {
-    #stage {
-      --scroll-depth: 1; /* headings just scroll with the page */
+    #stage #near {
+      --scroll-depth: 1 !important; /* headings just scroll with the page */
     }
   }
 
